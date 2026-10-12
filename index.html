@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Cellular 3D</title>
+  <meta name="description" content="Трёхмерный клеточный автомат на GPU: случайные правила, каталог, плавные анимации.">
+  <meta name="theme-color" content="#07080f">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%2362f4ff'/%3E%3Cstop offset='1' stop-color='%23a06eff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M16 2 29 9.5v13L16 30 3 22.5v-13z' fill='url(%23g)'/%3E%3Cpath d='M3 9.5 16 17l13-7.5M16 17v13' stroke='%23070812' stroke-width='2' fill='none'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <script>if (innerWidth < 760) document.body.classList.add('panel-closed');</script>
+  <canvas id="view" aria-label="3D-визуализация клеточного автомата"></canvas>
+
+  <header class="hud glass" id="hud">
+    <div class="brand">
+      <span class="logo" data-icon="cube"></span>
+      <div>
+        <div class="title">Cellular<span>3D</span></div>
+        <div class="subtitle">трёхмерный клеточный автомат</div>
+      </div>
+    </div>
+    <div class="rule-line">
+      <div class="rule-name" id="ruleName">—</div>
+      <button class="rule-code mono" id="ruleCode" title="Скопировать правило">—</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><span>Поколение</span><b id="stGen">0</b></div>
+      <div class="stat"><span>Живых</span><b id="stPop">0</b></div>
+      <div class="stat"><span>FPS</span><b id="stFps">—</b></div>
+    </div>
+    <canvas class="spark" id="spark" aria-hidden="true"></canvas>
+    <div class="meta mono" id="stMeta"></div>
+  </header>
+
+  <aside class="panel glass" id="panel" aria-label="Настройки">
+    <div class="panel-head">
+      <h2>Настройки</h2>
+      <button class="icon-btn" id="panelClose" title="Скрыть панель · P" data-icon="close"></button>
+    </div>
+    <div class="panel-body" id="panelBody"></div>
+    <div class="panel-foot">
+      <span><kbd>Пробел</kbd> пауза</span>
+      <span><kbd>→</kbd> шаг</span>
+      <span><kbd>N</kbd> случайное</span>
+      <span><kbd>M</kbd> мутация</span>
+      <span><kbd>Z</kbd> назад</span>
+      <span><kbd>R</kbd> перезапуск</span>
+      <span><kbd>S</kbd> сохранить</span>
+      <span><kbd>C</kbd> каталог</span>
+      <span><kbd>H</kbd> скрыть UI</span>
+    </div>
+  </aside>
+
+  <nav class="toolbar glass" id="toolbar" aria-label="Управление">
+    <button data-act="undo" data-tip="Предыдущее правило · Z" data-icon="undo"></button>
+    <button data-act="reset" data-tip="Перезапуск · R" data-icon="reset"></button>
+    <button data-act="play" class="primary" data-tip="Пауза · Пробел"></button>
+    <button data-act="step" data-tip="Шаг · →" data-icon="step"></button>
+    <span class="sep"></span>
+    <button data-act="random" data-tip="Случайное правило · N" data-icon="dice"></button>
+    <button data-act="mutate" data-tip="Мутация · M" data-icon="mutate"></button>
+    <span class="sep"></span>
+    <button data-act="save" data-tip="Сохранить · S" data-icon="save"></button>
+    <button data-act="catalog" data-tip="Каталог · C" data-icon="catalog"></button>
+    <span class="sep"></span>
+    <button data-act="shot" data-tip="Скриншот" data-icon="camera"></button>
+    <button data-act="panel" data-tip="Настройки · P" data-icon="sliders"></button>
+    <button data-act="fullscreen" data-tip="Полный экран · F" data-icon="maximize"></button>
+  </nav>
+
+  <div class="busy glass" id="busy" role="status"><span class="spinner"></span>Ищу интересное правило…</div>
+
+  <div class="modal" id="catalogModal" hidden>
+    <div class="modal-card glass wide" role="dialog" aria-modal="true" aria-labelledby="catTitle">
+      <div class="modal-head">
+        <h2 id="catTitle">Каталог</h2>
+        <div class="tabs">
+          <button data-tab="mine" class="active">Мои правила <span class="count" id="mineCount"></span></button>
+          <button data-tab="presets">Встроенные</button>
+        </div>
+        <div class="spacer"></div>
+        <input type="search" id="catSearch" placeholder="Поиск по имени или правилу" aria-label="Поиск">
+        <button class="btn ghost" id="catImport" data-icon="upload"><span>Импорт</span></button>
+        <button class="btn ghost" id="catExport" data-icon="download"><span>Экспорт</span></button>
+        <button class="icon-btn" data-close title="Закрыть · Esc" data-icon="close"></button>
+      </div>
+      <div class="cards" id="cards"></div>
+      <input type="file" id="importFile" accept=".json,application/json" hidden>
+    </div>
+  </div>
+
+  <div class="modal" id="saveModal" hidden>
+    <div class="modal-card glass narrow" role="dialog" aria-modal="true" aria-labelledby="saveTitle">
+      <div class="modal-head">
+        <h2 id="saveTitle">Сохранить в каталог</h2>
+        <div class="spacer"></div>
+        <button class="icon-btn" data-close title="Закрыть · Esc" data-icon="close"></button>
+      </div>
+      <div class="save-body">
+        <img id="savePreview" alt="Превью">
+        <div class="save-fields">
+          <label class="field">
+            <span>Название</span>
+            <input id="saveName" maxlength="60" autocomplete="off">
+          </label>
+          <code class="save-rule mono" id="saveRule"></code>
+          <p class="hint">Вместе с правилом сохраняются затравка, палитра, свет и остальные настройки вида.</p>
+          <div class="row-end">
+            <button class="btn ghost" data-close>Отмена</button>
+            <button class="btn accent" id="saveConfirm">Сохранить</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+  <div class="fatal" id="fatal" hidden></div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

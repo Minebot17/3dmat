@@ -1,0 +1,10 @@
+{
+  "name": "cellular-3d",
+  "version": "1.0.0",
+  "description": "GPU 3D cellular automaton with random rules, catalogue and animated voxel rendering",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  }
+}

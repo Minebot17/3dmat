@@ -1,0 +1,8 @@
+# Secrets — never commit
+github_personal_key.txt
+*.key
+.env
+
+# Local tooling
+.claude/
+node_modules/
